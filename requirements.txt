@@ -1,3 +1,4 @@
-requests==2.31.0
-netifaces==0.10.9
-scapy==2.4.2
+netfilterqueue>=1.1.0
+psutil>=5.9.0
+scapy>=2.5.0
+requests>=2.31.0

@@ -26,7 +26,7 @@ from requests.exceptions import Timeout, ConnectionError
 logger = logging.getLogger("oschameleon")
 
 
-urls_ = ["http://queryip.net/ip/", "http://ifconfig.me/ip"]
+urls_ = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"]
 
 
 class Ext_IP(object):
@@ -71,4 +71,12 @@ class Ext_IP(object):
 
 if __name__ == "__main__":
     ext = Ext_IP()
-    print(ext.get_ext_ip(urls=["http://queryip.net/ip/", "http://ifconfig.me/ip"]))
+    print(
+        ext.get_ext_ip(
+            urls=[
+                "https://api.ipify.org",
+                "https://ifconfig.me/ip",
+                "https://icanhazip.com",
+            ]
+        )
+    )

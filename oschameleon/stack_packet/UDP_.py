@@ -5,9 +5,9 @@ Created on 24.09.2016
 @author: manuel
 """
 
-from ICMP_ import send_ICMP_reply
-from helper import drop_packet
-from helper import forward_packet
+from .ICMP_ import send_ICMP_reply
+from .helper import drop_packet
+from .helper import forward_packet
 from scapy.all import IP, UDP  # @UnresolvedImport
 
 
@@ -18,9 +18,9 @@ def check_UDP_probe(pkt, nfq_packet, os_pattern):
     """
     if (
         pkt[IP].id == 0x1042
-        and pkt[UDP].payload.load[0] == "C"
-        and pkt[UDP].payload.load[1] == "C"
-        and pkt[UDP].payload.load[2] == "C"
+        and pkt[UDP].payload.load[0] == ord("C")
+        and pkt[UDP].payload.load[1] == ord("C")
+        and pkt[UDP].payload.load[2] == ord("C")
     ):
         drop_packet(nfq_packet)
         if os_pattern.PROBES_2_SEND["U1"]:

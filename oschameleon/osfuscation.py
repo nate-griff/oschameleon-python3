@@ -38,23 +38,22 @@ Network Distance: 1 hop
 # Log error messages only
 
 
-import gevent
+import asyncio
 import logging
-import nfqueue
 import os
-import socket
+from netfilterqueue import NetfilterQueue
 
-from parse_fp import get_os_pattern
+from oschameleon.parse_fp import get_os_pattern
 from scapy.all import IP, TCP, UDP, ICMP  # @UnresolvedImport
 from scapy.config import conf  # @UnresolvedImport
 from scapy.supersocket import L3RawSocket  # @UnresolvedImport
-import session
-from stack_packet.ICMP_ import check_ICMP_probes
-from stack_packet.TCP_ import check_TCP_probes
-from stack_packet.UDP_ import check_UDP_probe
-from stack_packet.helper import flush_tables
-from stack_packet.helper import forward_packet
-from stack_packet.helper import rules
+from oschameleon import session
+from oschameleon.stack_packet.ICMP_ import check_ICMP_probes
+from oschameleon.stack_packet.TCP_ import check_TCP_probes
+from oschameleon.stack_packet.UDP_ import check_UDP_probe
+from oschameleon.stack_packet.helper import flush_tables
+from oschameleon.stack_packet.helper import forward_packet
+from oschameleon.stack_packet.helper import rules
 
 
 # from session.log import Log
@@ -83,7 +82,7 @@ class ProcessPKT(object):
 
     def callback(self, nfq_packet):
         # Get packetdata from nfqueue packet and build a Scapy packet
-        pkt = IP(nfq_packet.get_data())
+        pkt = IP(nfq_packet.get_payload())
 
         # check TCP packets
         if pkt.haslayer(TCP):
@@ -104,11 +103,6 @@ class ProcessPKT(object):
 
 
 class OSFuscation(object):
-
-    @classmethod
-    def worker(cls, queue):
-        while True:
-            queue.process_pending(5)
 
     @classmethod
     def run(cls, debug=False, template_path='', server_ip=None):
@@ -132,21 +126,19 @@ class OSFuscation(object):
         session_ = session.get_Session()
 
         # creation of a new queue object
-        q = nfqueue.queue()
-        q.set_callback(ProcessPKT(os_pattern, session_, debug).callback)
-        q.fast_open(0, socket.AF_INET)
-        q.set_queue_maxlen(-1)
+        nfq = NetfilterQueue()
+        nfq.bind(0, ProcessPKT(os_pattern, session_, debug).callback)
+        queue_socket = nfq.get_socket()
+        loop = asyncio.get_event_loop()
 
         # process queue for packet manipulation
         try:
-            workers = list()
-            for i in range(2):
-                workers.append(gevent.spawn(cls.worker, q))
-            gevent.joinall(workers)
+            loop.add_reader(queue_socket, nfq.run_socket, queue_socket)
+            loop.run_forever()
         except KeyboardInterrupt:
             # on exit clean up
-            q.unbind(socket.AF_INET)
-            q.close()
+            loop.remove_reader(queue_socket)
+            nfq.unbind()
             flush_tables()
             print('Exiting...')
 

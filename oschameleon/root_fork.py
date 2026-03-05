@@ -1,17 +1,13 @@
 # Copyright (c) 2015 Lukas Rist
 
 import argparse
-import gevent
-import gevent.monkey
 import grp
 import os
 import pwd
+import time
 
-from osfuscation import OSFuscation
-from stack_packet.helper import flush_tables
-
-
-gevent.monkey.patch_all()
+from oschameleon.osfuscation import OSFuscation
+from oschameleon.stack_packet.helper import flush_tables
 
 
 def root_process():
@@ -20,7 +16,7 @@ def root_process():
             pwd.getpwuid(os.getuid())[0], grp.getgrgid(os.getgid())[0]
         )
     )
-    data = OSFuscation.run(args.template)
+    data = OSFuscation.run(False, args.template, None)
     print("OSFuscation return value", data)
 
 
@@ -33,14 +29,12 @@ def drop_privileges(uid_name="nobody", gid_name="nogroup"):
     wanted_uid = pwd.getpwnam(uid_name)[2]
     wanted_gid = grp.getgrnam(gid_name)[2]
 
-    pid = gevent.fork()
+    pid = os.fork()
     # print "root_fork : drop_privil  :  pid   ",pid
     if pid == 0:
         # child
         print("starting child process")
-        child_process = gevent.spawn(root_process)
-        child_process.join()
-        print("Child done:", child_process.successful())
+        root_process()
         flush_tables()
         print("Child exit")
     else:
@@ -56,7 +50,7 @@ def drop_privileges(uid_name="nobody", gid_name="nogroup"):
         )
         while True:
             try:
-                gevent.sleep(1)
+                time.sleep(1)
                 print("Parent: ping")
             except KeyboardInterrupt:
                 break

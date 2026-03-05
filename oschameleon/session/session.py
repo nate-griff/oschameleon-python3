@@ -6,9 +6,11 @@ Created on 02.12.2016
 
 from datetime import datetime, timedelta
 import logging
-from ext_ip import Ext_IP
-from netifaces import AF_INET, AF_INET6, AF_LINK, AF_PACKET, AF_BRIDGE
-import netifaces as ni
+import socket
+
+import psutil
+
+from .ext_ip import Ext_IP
 
 logger = logging.getLogger("oschameleon")
 
@@ -29,7 +31,15 @@ class Session(object):
         if public is True:
             self.my_ip = ext.get_ext_ip()
         else:
-            self.my_ip = ni.ifaddresses(interface)[AF_INET][0]["addr"]
+            addresses = psutil.net_if_addrs().get(interface, [])
+            for address in addresses:
+                if address.family == socket.AF_INET:
+                    self.my_ip = address.address
+                    break
+            else:
+                raise ValueError(
+                    "No IPv4 address found on interface '{}'".format(interface)
+                )
 
     def in_session(self, ip, debug):
         currenttime = datetime.now()

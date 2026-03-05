@@ -2,7 +2,7 @@
 
 import random
 
-from stack_packet.template import OSPatternTemplate
+from oschameleon.stack_packet.template import OSPatternTemplate
 
 # from pdfminer.rijndael import KEYLENGTH
 
@@ -213,7 +213,7 @@ def set_tcp_option(os_pattern, fp):
                 value = fp[c]["O"]
                 current_probe, timestamp = split_tcp_option(value)
                 os_pattern.TCP_OPTIONS[c]["O"] = current_probe
-                os_pattern.TCP_Timestamp[c] = []
+                os_pattern.TCP_Timestamp[c] = {"tsval": 0, "tsver": 0}
                 if timestamp:
                     os_pattern.TCP_Timestamp[c]["tsval"] = timestamp[0]
                     os_pattern.TCP_Timestamp[c]["tsver"] = timestamp[1]
@@ -279,7 +279,7 @@ def set_tcp_ttl(os_pattern, fp):
 def get_os_pattern(fprint_template, debug):
     os_pattern = OSPatternTemplate()
     # print os_pattern.TTL
-    with open(fprint_template, "rb") as fh:
+    with open(fprint_template, "r", encoding="utf-8") as fh:
         data = fh.readlines()
 
     fp = dict()

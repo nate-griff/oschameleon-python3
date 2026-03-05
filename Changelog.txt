@@ -1,3 +1,14 @@
+OSChameleon 0.2.0 (release 2026-03-05)
+    * Ported to Python 3.8+
+    * Replaced python-nfqueue with netfilterqueue
+    * Replaced gevent worker loop with asyncio-based queue handling
+    * Replaced netifaces with psutil for interface IP lookup
+    * Added iptables/nftables backend auto-detection
+    * Replaced shell-based firewall commands with subprocess argument lists
+    * Fixed Python 3 bytes/str handling in packet logic
+    * Added Windows 10 and Ubuntu 22.04 fingerprint templates
+    * Expanded tests for parser/session/ext-ip/verdict helper behavior
+
 OSChameleon 0.1.2 (release 2015-04-08)
     * Multiple workers per queue
     * Fingerprint as a parameter

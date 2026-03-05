@@ -2,32 +2,27 @@
 Created on 01.12.2016
 
 @author: manuel
+
+Reconfigured on 03.05.2026 for python3
+
+@author: nate-griff
 """
 import argparse
-import gevent.monkey
 import grp
 import os
 import pwd
+import time
 
-from osfuscation import OSFuscation
-from session.log import Log
-import session
-from stack_packet.helper import flush_tables
-
-import nfqueue
+from oschameleon.osfuscation import OSFuscation
+from oschameleon.session.log import Log
+from oschameleon import session
+from oschameleon.stack_packet.helper import flush_tables
 
 Log("oschameleon")
 
 
 class OSChameleon(object):
     def __init__(self, template=None, template_directory=None, args=None):
-        if float(nfqueue.nfq_bindings_version()) < 0.6:
-            print(
-                "Found nfqueue version: {} but need at least 0.6, aborting.".format(
-                    nfqueue.nfq_bindings_version()
-                )
-            )
-            exit(1)
         self.parser = argparse.ArgumentParser(description="OSChameleon sample usage")
         self.parser.add_argument(
             "--template",
@@ -59,8 +54,6 @@ class OSChameleon(object):
             default=False,
         )
         self.args = self.parser.parse_args()
-
-        gevent.monkey.patch_all()
 
         if self.args.debug == "True":
             self.args.debug = True
@@ -100,13 +93,12 @@ class OSChameleon(object):
         wanted_uid = pwd.getpwnam(uid_name)[2]
         wanted_gid = grp.getgrnam(gid_name)[2]
 
-        pid = gevent.fork()
+        pid = os.fork()
         # print "root_fork : drop_privil  :  pid   ",pid
         if pid == 0:
             # child
             # print  ('starting child process')
-            child_process = gevent.spawn(self.root_process)
-            child_process.join()
+            self.root_process()
             # print  ('Child done:', child_process.successful())
             flush_tables()
             # print  ('Child exit')
@@ -124,7 +116,7 @@ class OSChameleon(object):
                 )
             while True:
                 try:
-                    gevent.sleep(1)
+                    time.sleep(1)
                     # print ('Parent: ping')
                 except KeyboardInterrupt:
                     break

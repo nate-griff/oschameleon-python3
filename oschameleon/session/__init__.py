@@ -1,4 +1,4 @@
-from session import Session
+from .session import Session
 
 session_ = Session()
 

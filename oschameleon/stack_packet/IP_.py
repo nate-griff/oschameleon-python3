@@ -93,12 +93,13 @@ def _build_crc_tables(crc32_table, crc32_reverse):
 def crc32(s, crc32_table):
     crc = 0xFFFFFFFF
     for c in s:
-        crc = (crc >> 8) ^ crc32_table[crc & 0xFF ^ ord(c)]
+        byte_val = c if isinstance(c, int) else ord(c)
+        crc = (crc >> 8) ^ crc32_table[crc & 0xFF ^ byte_val]
     return crc ^ 0xFFFFFFFF
 
 
 def reverse_crc(wanted_crc):
-    s = " "
+    s = b" "
     pos = len(s)
     crc32_table, crc32_reverse = [0] * 256, [0] * 256
     crc32_table, crc32_reverse = _build_crc_tables(crc32_table, crc32_reverse)
@@ -106,18 +107,21 @@ def reverse_crc(wanted_crc):
     # forward calculation of CRC up to pos, sets current forward CRC state
     fwd_crc = 0xFFFFFFFF
     for c in s[:pos]:
-        fwd_crc = (fwd_crc >> 8) ^ crc32_table[fwd_crc & 0xFF ^ ord(c)]
+        byte_val = c if isinstance(c, int) else ord(c)
+        fwd_crc = (fwd_crc >> 8) ^ crc32_table[fwd_crc & 0xFF ^ byte_val]
 
     # backward calculation of CRC up to pos, sets wanted backward CRC state
     bkd_crc = wanted_crc ^ 0xFFFFFFFF
     for c in s[pos:][::-1]:
         bkd_crc = ((bkd_crc << 8) & 0xFFFFFFFF) ^ crc32_reverse[bkd_crc >> 24]
-        bkd_crc ^= ord(c)
+        byte_val = c if isinstance(c, int) else ord(c)
+        bkd_crc ^= byte_val
 
     # deduce the 4 bytes we need to insert
     for c in struct.pack("<L", fwd_crc)[::-1]:
         bkd_crc = ((bkd_crc << 8) & 0xFFFFFFFF) ^ crc32_reverse[bkd_crc >> 24]
-        bkd_crc ^= ord(c)
+        byte_val = c if isinstance(c, int) else ord(c)
+        bkd_crc ^= byte_val
 
     res = s[:pos] + struct.pack("<L", bkd_crc) + s[pos:]
 

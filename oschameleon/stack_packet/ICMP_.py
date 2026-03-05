@@ -6,9 +6,9 @@ Created on 24.09.2016
 @author: manuel
 """
 
-from IP_ import ReplyPacket
-from helper import drop_packet
-from helper import forward_packet
+from .IP_ import ReplyPacket
+from .helper import drop_packet
+from .helper import forward_packet
 from scapy.all import IP, UDP, ICMP, send, Padding  # @UnresolvedImport
 
 
