@@ -128,19 +128,33 @@ class OSFuscation(object):
         # creation of a new queue object
         nfq = NetfilterQueue()
         nfq.bind(0, ProcessPKT(os_pattern, session_, debug).callback)
-        queue_socket = nfq.get_socket()
-        loop = asyncio.get_event_loop()
+        use_legacy_socket_api = hasattr(nfq, "get_socket") and hasattr(nfq, "run_socket")
+        queue_socket = None
+        loop = None
 
-        # process queue for packet manipulation
+        # Process queue for packet manipulation.
+        # Newer netfilterqueue versions expose `run()` instead of `get_socket()`.
         try:
-            loop.add_reader(queue_socket, nfq.run_socket, queue_socket)
-            loop.run_forever()
+            if use_legacy_socket_api:
+                queue_socket = nfq.get_socket()
+                loop = asyncio.get_event_loop()
+                loop.add_reader(queue_socket, nfq.run_socket, queue_socket)
+                loop.run_forever()
+            else:
+                nfq.run()
         except KeyboardInterrupt:
-            # on exit clean up
-            loop.remove_reader(queue_socket)
-            nfq.unbind()
-            flush_tables()
             print('Exiting...')
+        finally:
+            if use_legacy_socket_api and loop is not None and queue_socket is not None:
+                try:
+                    loop.remove_reader(queue_socket)
+                except Exception:
+                    pass
+            try:
+                nfq.unbind()
+            except Exception:
+                pass
+            flush_tables()
 
 
 if __name__ == '__main__':

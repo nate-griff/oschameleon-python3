@@ -15,6 +15,13 @@ Prerequisites:
 - `netfilterqueue` Python package
 - `requirements.txt`
 
+System packages required on Debian/Ubuntu/WSL before Python install:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential python3-dev libnetfilter-queue-dev libnfnetlink-dev
+```
+
 Recorded logs are stored to `/var/log/honeypot/`
 
 Usage:
@@ -32,6 +39,7 @@ Template options include:
 - `oschameleon/template/windows_7_SP1.txt`
 - `oschameleon/template/windows_10.txt`
 - `oschameleon/template/ubuntu_2204.txt`
+Grab template data from https://svn.nmap.org/nmap/nmap-os-db
 
 You can also invoke directly:
 

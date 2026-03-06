@@ -7,6 +7,12 @@ Validate that the modernized codebase works correctly on a real Linux kernel wit
 - Use a Linux host/VM (not native Windows).
 - Run as root for runtime packet interception.
 - Ensure the test scanner is a separate machine/network namespace.
+- Install required system build dependencies for `netfilterqueue`:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential python3-dev libnetfilter-queue-dev libnfnetlink-dev
+```
 
 ## Recommended Validation Sequence
 
@@ -16,19 +22,28 @@ Validate that the modernized codebase works correctly on a real Linux kernel wit
 pip install -r requirements.txt
 ```
 
-2. Run the Python test suite:
+2. Install test dependencies:
+
+```bash
+pip install pytest
+```
+
+3. Run the Python test suite:
 
 ```bash
 python -m pytest tests -q
 ```
 
-3. Import smoke check:
+4. Import smoke check:
 
 ```bash
 python -c "from oschameleon.osfuscation import OSFuscation; print('ok')"
 ```
 
-4. Run OSChameleon with one template (as root):
+5. Run OSChameleon with one template (as root):
+
+`<mgmt_ip>` is the remote management/peer host IP used for firewall allow rules on TCP port `63712` (the `--server` argument).
+It is usually **not** the local interface IP. For local-only testing, you can keep `--server 127.0.0.1`.
 
 ```bash
 sudo python -m oschameleon \
@@ -37,14 +52,23 @@ sudo python -m oschameleon \
   --server <mgmt_ip> \
   --debug True
 ```
+---
+```bash
+sudo python -m oschameleon \
+  --template oschameleon/template/SIMATIC_300_PLC.txt \
+  --interface eth0 \
+  --server 127.0.0.1 \
+  --debug True
+```
+---
 
-5. From a different host, run OS detection:
+6. From a different host, run OS detection:
 
 ```bash
 nmap -O <target_ip>
 ```
 
-6. Repeat runtime test with additional templates:
+7. Repeat runtime test with additional templates:
 - `oschameleon/template/windows_10.txt`
 - `oschameleon/template/ubuntu_2204.txt`
 

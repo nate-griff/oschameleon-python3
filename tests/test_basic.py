@@ -5,10 +5,13 @@ from unittest.mock import Mock, patch
 
 import oschameleon
 from requests.exceptions import ConnectionError
+from scapy.all import IP, UDP, Raw
 from oschameleon.parse_fp import get_os_pattern
+from oschameleon.osfuscation import OSFuscation
 from oschameleon.session.session import Session
 from oschameleon.session.ext_ip import Ext_IP
 from oschameleon.stack_packet.helper import drop_packet, forward_packet
+from oschameleon.stack_packet.ICMP_ import send_ICMP_reply
 
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "oschameleon" / "template"
@@ -123,3 +126,44 @@ class TestNFQueueCallbacks(unittest.TestCase):
         packet = Mock()
         drop_packet(packet)
         packet.drop.assert_called_once_with()
+
+
+class TestNFQueueCompatibility(unittest.TestCase):
+    @patch("oschameleon.osfuscation.flush_tables")
+    @patch("oschameleon.osfuscation.rules")
+    @patch("oschameleon.osfuscation.session.get_Session")
+    @patch("oschameleon.osfuscation.get_os_pattern")
+    @patch("oschameleon.osfuscation.os.geteuid", return_value=0)
+    @patch("oschameleon.osfuscation.NetfilterQueue")
+    def test_run_fallback_without_get_socket(
+        self,
+        mock_nfq_cls,
+        _mock_geteuid,
+        _mock_get_os_pattern,
+        _mock_get_session,
+        _mock_rules,
+        mock_flush_tables,
+    ):
+        # Simulate modern netfilterqueue API where get_socket/run_socket are absent.
+        mock_nfq = Mock(spec=["bind", "run", "unbind"])
+        mock_nfq_cls.return_value = mock_nfq
+
+        OSFuscation.run(debug=False, template_path=str(TEMPLATE_DIR / "SIMATIC_300_PLC.txt"), server_ip="127.0.0.1")
+
+        mock_nfq.bind.assert_called_once()
+        mock_nfq.run.assert_called_once_with()
+        mock_nfq.unbind.assert_called_once_with()
+        self.assertGreaterEqual(mock_flush_tables.call_count, 2)
+
+
+class TestICMPPython3Compatibility(unittest.TestCase):
+    @patch("oschameleon.stack_packet.ICMP_.send")
+    def test_udp_icmp_reply_with_cleared_payload_builds(self, _mock_send):
+        class Pattern:
+            TTL = 64
+            UN = 0
+            CL_UDP_DATA = 1
+            ICMP_IPL = 56
+
+        pkt = IP(src="192.0.2.10", dst="192.0.2.20") / UDP(sport=12345, dport=33434) / Raw(load=b"CCC")
+        send_ICMP_reply(pkt, 3, Pattern(), {"DF": 0})

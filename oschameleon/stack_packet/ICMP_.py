@@ -39,7 +39,7 @@ class ICMPPacket(ReplyPacket):
 
     # some OS reply with no data returned
     def clr_payload(self):
-        self.pkt[UDP].payload = ""
+        self.pkt[UDP].remove_payload()
 
     # echo reply
     def send_packet(self):
@@ -82,14 +82,14 @@ def send_ICMP_reply(pkt, ICMP_type, os_pattern, TCP_OPTIONS):
         # n1 -> convert in hex
         #
 
-        len_packet = int(str(len(icmp_rpl.pkt)), 16)
+        len_packet = len(icmp_rpl.pkt)
         if len_packet < os_pattern.ICMP_IPL:
             print("icmp input packet length: ", len_packet)
             pad_len = os_pattern.ICMP_IPL - len_packet - 16
             pad = Padding()
-            pad.add_payload("\x00" * pad_len)
+            pad.add_payload(b"\x00" * pad_len)
             icmp_rpl.pkt = icmp_rpl.pkt / pad
-            print("icmp reply packet length: ", int(str(len(icmp_rpl.pkt)), 16))
+            print("icmp reply packet length: ", len(icmp_rpl.pkt))
 
         # send ICMP Port Unreachable
         icmp_rpl.send_PUR_packet()
@@ -100,7 +100,7 @@ def check_ICMP_probes(pkt, nfq_packet, os_pattern):
     Identify the ICMP based probes
     and reply with a faked packet if needed
     """
-    if pkt[ICMP].type is 8:
+    if pkt[ICMP].type == 8:
         # Probe 1 + 2
         if (
             pkt[ICMP].seq == 295
