@@ -54,6 +54,35 @@ def _upper_end_hex(string, start):
             int(string[i], 16)
         except ValueError:
             return i
+    return len(string)
+
+
+def _parse_tcp_option_value(value, start):
+    # Support both legacy hex tokens (e.g. M5B4) and bracket ranges (e.g. M[54D-5BC]).
+    if start >= len(value):
+        return None
+
+    if value[start] == "[":
+        end = value.find("]", start + 1)
+        if end == -1:
+            return None
+        token = value[start + 1 : end]
+        if not token:
+            return None
+        if "-" in token:
+            lower, upper = token.split("-", 1)
+            lower_int = _str2hexint(lower)
+            upper_int = _str2hexint(upper)
+            if lower_int > upper_int:
+                lower_int, upper_int = _switch(lower_int, upper_int)
+            return random.randint(lower_int, upper_int)
+        return _str2hexint(token)
+
+    upper = _upper_end_hex(value, start)
+    token = value[start:upper]
+    if not token:
+        return None
+    return _str2hexint(token)
 
 
 # timestamp
@@ -152,11 +181,9 @@ def split_tcp_option(value):
 
         # MSS
         if value[ch] == "M":
-            upper = _upper_end_hex(value, ch + 1)
-            ans = value[ch + 1 : upper]
-            # int('0x' + string, 16)
-            ans = int("0x" + ans, 16)
-            current_probe.append(("MSS", ans))
+            ans = _parse_tcp_option_value(value, ch + 1)
+            if ans is not None:
+                current_probe.append(("MSS", ans))
         # NOP
         if value[ch] == "N":
             current_probe.append(("NOP", 0))
@@ -165,9 +192,9 @@ def split_tcp_option(value):
             current_probe.append(("EOL", 0))
         # Window size
         if value[ch] == "W":
-            upper = _upper_end_hex(value, ch + 1)
-            ans = value[ch + 1 : upper]
-            current_probe.append(("WScale", ans))
+            ans = _parse_tcp_option_value(value, ch + 1)
+            if ans is not None:
+                current_probe.append(("WScale", ans))
         # Timestamp
         if value[ch] == "T":
             ans = value[ch + 1 : ch + 3]
@@ -295,8 +322,8 @@ def get_os_pattern(fprint_template, debug):
             if "|" in val:
                 # eg. GCD=FA7F|1F4FE|2EF7D|3E9FC|4E47B
                 val = random.choice(val.split("|"))
-            if "-" in val:
-                minVal, maxVal = val.split("-")
+            if key in ("SP", "GCD", "ISR", "T") and "-" in val:
+                minVal, maxVal = val.split("-", 1)
                 # choose random number in the range min-max
                 # eg. SP=0-5
                 # os_pattern.SP_MIN, os_pattern.SP_MAX = _parse_range(fp['SEQ']['SP'])

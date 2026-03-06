@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import oschameleon
 from requests.exceptions import ConnectionError
 from scapy.all import IP, UDP, Raw
-from oschameleon.parse_fp import get_os_pattern
+from oschameleon.parse_fp import get_os_pattern, split_tcp_option
 from oschameleon.osfuscation import OSFuscation
 from oschameleon.session.session import Session
 from oschameleon.session.ext_ip import Ext_IP
@@ -23,6 +23,23 @@ class TestBasic(unittest.TestCase):
 
 
 class TestTemplateParsing(unittest.TestCase):
+    def test_split_tcp_option_supports_mss_range(self):
+        options, timestamp = split_tcp_option("M[54D-5BC]NW8NNS")
+        self.assertIn(("NOP", 0), options)
+        self.assertIn(("WScale", 8), options)
+        self.assertIn(("SAckOK", ""), options)
+        mss_values = [val for key, val in options if key == "MSS"]
+        self.assertEqual(len(mss_values), 1)
+        self.assertGreaterEqual(mss_values[0], int("54D", 16))
+        self.assertLessEqual(mss_values[0], int("5BC", 16))
+        self.assertEqual(timestamp, [])
+
+    @patch("oschameleon.parse_fp.random.randint", return_value=int("580", 16))
+    def test_split_tcp_option_mss_range_uses_expected_bounds(self, mock_randint):
+        options, _timestamp = split_tcp_option("M[54D-5BC]NW8NNS")
+        mock_randint.assert_called_once_with(int("54D", 16), int("5BC", 16))
+        self.assertIn(("MSS", int("580", 16)), options)
+
     def test_load_simatic(self):
         pattern = get_os_pattern(str(TEMPLATE_DIR / "SIMATIC_300_PLC.txt"), False)
         self.assertGreaterEqual(pattern.TTL, 25)
